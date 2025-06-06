@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 type CategoryData = {
   icon: React.ReactNode;
@@ -45,69 +45,37 @@ type Post = {
 
 export default function HomePage() {
   const [searchTerm, setSearchTerm] = useState("");
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [page, setPage] = useState(1);
 
-  const posts: Post[] = [
-    {
-      id: 1,
-      author: "Maria Silva",
-      content: "Alagamento na Rua das Flores, 123. Água chegando ao joelho. Preciso de ajuda para evacuar idosos.",
-      address: "Rua das Flores, 123 - Vila Madalena",
-      cep: "05435-000",
-      phone: "(11) 99999-1234",
-      timestamp: "há 15 minutos",
-      category: "flood",
-      urgent: true,
-      image: "/placeholder.svg?height=300&width=400",
-    },
-    {
-      id: 2,
-      author: "João Santos",
-      content: "Deslizamento de terra na encosta. Várias casas em risco. Bombeiros já foram acionados.",
-      address: "Rua da Encosta, 456 - Capão Redondo",
-      cep: "05890-000",
-      phone: "(11) 98888-5678",
-      timestamp: "há 32 minutos",
-      category: "landslide",
-      urgent: true,
-      image: "/placeholder.svg?height=300&width=400",
-    },
-    {
-      id: 3,
-      author: "Ana Costa",
-      content: "Oferecendo abrigo temporário para famílias desabrigadas. Tenho espaço para 4 pessoas.",
-      address: "Av. Paulista, 789 - Bela Vista",
-      cep: "01310-000",
-      phone: "(11) 97777-9012",
-      timestamp: "há 1 hora",
-      category: "help",
-      urgent: false,
-      image: null,
-    },
-    {
-      id: 4,
-      author: "Carlos Oliveira",
-      content: "Princípio de incêndio em prédio residencial. Moradores evacuados. Aguardando bombeiros.",
-      address: "Rua dos Pinheiros, 321 - Pinheiros",
-      cep: "05422-000",
-      phone: "(11) 96666-3456",
-      timestamp: "há 2 horas",
-      category: "fire",
-      urgent: true,
-      image: "/placeholder.svg?height=300&width=400",
-    },
-    {
-      id: 5,
-      author: "Fernanda Lima",
-      content: "Falta de energia elétrica em todo o quarteirão há 6 horas. Transformador com problemas.",
-      address: "Rua das Palmeiras, 567 - Moema",
-      cep: "04567-000",
-      phone: "(11) 95555-7890",
-      timestamp: "há 3 horas",
-      category: "power",
-      urgent: false,
-      image: null,
-    },
-  ]
+  useEffect(() => {
+    const fetchPosts = async () => {
+      const res = await fetch(`http://localhost:3001/api/posts?page=${page}`);
+      const data = await res.json();
+
+      const formattedPosts = data.map((post: any) => ({
+        id: post.id,
+        author: post.title,
+        content: post.content,
+        address: `${post.address}, ${post.number} - ${post.neighborhood}, ${post.city} - ${post.state}`,
+        cep: post.cep,
+        phone: post.phone,
+        timestamp: new Date(post.createdAt).toLocaleString("pt-BR"),
+        category: post.category,
+        urgent: post.category !== "help",
+        image: post.imageUrl ? `http://localhost:3001/${post.imageUrl}` : null,
+        createdAt: post.createdAt,
+      }));
+
+      if (page === 1) {
+        setPosts(formattedPosts);
+      } else {
+        setPosts((prevPosts) => [...prevPosts, ...formattedPosts]);
+      }
+    };
+
+    fetchPosts();
+  }, [page]);
 
   const getCategoryData = (category: string): CategoryData => {
     switch (category) {
@@ -231,7 +199,6 @@ export default function HomePage() {
           </div>
         </div>
       </header>
-
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="bg-blue-100 rounded-lg p-6 mb-8">
           <p className="text-gray-800 text-center leading-relaxed">
@@ -243,14 +210,12 @@ export default function HomePage() {
             Juntos, podemos salvar vidas e reconstruir com dignidade.
           </p>
         </div>
-
         <div className="mb-8">
           <h2 className="text-3xl font-bold text-gray-900 mb-4">Feed de Publicações</h2>
           <p className="text-gray-600">
             Acompanhe as situações de emergência em tempo real e ofertas de ajuda da comunidade.
           </p>
         </div>
-
         <div className="flex flex-col sm:flex-row mb-6">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -262,11 +227,10 @@ export default function HomePage() {
             />
           </div>
         </div>
-       
         <div className="space-y-6">
           {filteredPosts.map((post) => (
             <Card 
-              key={post.id} 
+              key={`${post.id}-${post.createdAt}`} 
               className={getCardColor(post)}
             >
               <CardHeader className="pb-3">
@@ -306,7 +270,6 @@ export default function HomePage() {
               </CardHeader>
               <CardContent>
                 <p className="text-gray-800 mb-4">{post.content}</p>
-
                 {post.image && (
                   <div className="mb-4">
                     <img
@@ -316,7 +279,6 @@ export default function HomePage() {
                     />
                   </div>
                 )}
-
                 <div className="space-y-2 mb-4">
                   <div className="flex items-center space-x-4 text-sm text-gray-600">
                     <div className="flex items-center space-x-1">
@@ -326,13 +288,11 @@ export default function HomePage() {
                     <span>•</span>
                     <span>CEP: {post.cep}</span>
                   </div>
-
                   <div className="flex items-center space-x-1 text-sm text-gray-600">
                     <Phone className="w-4 h-4" />
                     <span>Contato: {post.phone}</span>
                   </div>
                 </div>
-
                 <div className="flex flex-wrap gap-2">
                   <a 
                     href={`https://wa.me/55${post.phone.replace(/\D/g, '')}`}
@@ -349,9 +309,8 @@ export default function HomePage() {
             </Card>
           ))}
         </div>
-
         <div className="mt-8 text-center">
-          <Button variant="outline" size="lg">
+          <Button variant="outline" size="lg" onClick={() => setPage(prev => prev + 1)}>
             Carregar Mais Publicações
           </Button>
         </div>

@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react";
-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -113,7 +112,7 @@ export default function PostPage() {
 
     if (!formData.phone.trim()) {
       newErrors.phone = "Telefone é obrigatório"
-    } else if (!/^$$\d{2}$$\s\d{4,5}-\d{4}$/.test(formData.phone)) {
+    } else if (!/^\(\d{2}\)\s\d{4,5}-\d{4}$/.test(formData.phone)) {
       newErrors.phone = "Telefone deve estar no formato (11) 99999-9999"
     }
 
@@ -137,7 +136,6 @@ export default function PostPage() {
 
   const handleInputChange = (field: keyof FormData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
-    // Clear error when user starts typing
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: undefined }))
     }
@@ -183,7 +181,6 @@ export default function PostPage() {
     const formatted = formatCEP(value)
     handleInputChange("cep", formatted)
 
-    // Only lookup if CEP is complete
     if (formatted.length === 9) {
       setIsLoadingCEP(true)
       try {
@@ -200,7 +197,6 @@ export default function PostPage() {
             state: data.uf,
           }))
 
-          // Clear address error if CEP lookup was successful
           setErrors((prev) => ({
             ...prev,
             address: undefined,
@@ -229,8 +225,6 @@ export default function PostPage() {
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         try {
-          // In a real app, you would use a reverse geocoding service
-          // For demo purposes, we'll simulate the response
           const mockAddress = {
             cep: "01310-100",
             address: "Av. Paulista",
@@ -250,7 +244,6 @@ export default function PostPage() {
             state: mockAddress.state,
           }))
 
-          // Clear any existing errors for these fields
           setErrors((prev) => ({
             ...prev,
             cep: undefined,
@@ -271,21 +264,32 @@ export default function PostPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-
-    if (!validateForm()) {
-      return
-    }
-
+    if (!validateForm()) return
     setIsSubmitting(true)
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 2000))
+    const data = new FormData()
 
-    setIsSubmitting(false)
-    setIsSuccess(true)
+    data.append("title", formData.name)
+    data.append("content", formData.content)
+    data.append("category", formData.category)
+    data.append("phone", formData.phone)
+    data.append("cep", formData.cep)
+    data.append("address", formData.address)
+    data.append("number", formData.number)
+    data.append("neighborhood", formData.neighborhood)
+    data.append("city", formData.city)
+    data.append("state", formData.state)
+    if (formData.file) data.append("image", formData.file)
 
-    // Reset form after success
-    setTimeout(() => {
+    try {
+      const response = await fetch("http://localhost:3001/api/posts", {
+        method: "POST",
+        body: data,
+      })
+
+      if (!response.ok) throw new Error("Erro ao criar publicação")
+
+      setIsSuccess(true)
       setFormData({
         name: "",
         content: "",
@@ -300,8 +304,12 @@ export default function PostPage() {
         file: null,
       })
       setImagePreview(null)
-      setIsSuccess(false)
-    }, 3000)
+    } catch (err) {
+      console.error(err)
+      alert("Erro ao enviar publicação")
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   if (isSuccess) {
@@ -327,7 +335,6 @@ export default function PostPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
@@ -360,18 +367,13 @@ export default function PostPage() {
           </div>
         </div>
       </header>
-
-      {/* Main Content */}
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Back Button */}
         <div className="mb-6">
           <Link href="/" className="inline-flex items-center text-gray-600 hover:text-gray-900">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Voltar ao Feed
           </Link>
         </div>
-
-        {/* Welcome Message */}
         <div className="bg-blue-100 rounded-lg p-6 mb-8">
           <p className="text-gray-800 text-center leading-relaxed">
             Use este formulário para reportar situações de emergência, solicitar ajuda ou oferecer apoio à comunidade.
@@ -379,7 +381,6 @@ export default function PostPage() {
             para autoridades competentes e voluntários.
           </p>
         </div>
-
         <form onSubmit={handleSubmit}>
           <Card>
             <CardHeader>
@@ -403,7 +404,6 @@ export default function PostPage() {
                   />
                   {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
                 </div>
-
                 <div>
                   <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
                     Telefone para Contato *
@@ -419,7 +419,6 @@ export default function PostPage() {
                   {errors.phone && <p className="text-red-500 text-sm mt-1">{errors.phone}</p>}
                 </div>
               </div>
-
               <div>
                 <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-2">
                   Categoria da Emergência *
@@ -444,7 +443,6 @@ export default function PostPage() {
                 </Select>
                 {errors.category && <p className="text-red-500 text-sm mt-1">{errors.category}</p>}
               </div>
-
               <div>
                 <label htmlFor="content" className="block text-sm font-medium text-gray-700 mb-2">
                   Descrição da Situação *
@@ -458,7 +456,6 @@ export default function PostPage() {
                 />
                 {errors.content && <p className="text-red-500 text-sm mt-1">{errors.content}</p>}
               </div>
-
               <div>
                 <label htmlFor="file" className="block text-sm font-medium text-gray-700 mb-2">
                   Anexar Foto ou Documento (Opcional)
@@ -482,7 +479,6 @@ export default function PostPage() {
                       </div>
                     </label>
                   </div>
-
                   {imagePreview && (
                     <div className="relative">
                       <img
@@ -506,7 +502,6 @@ export default function PostPage() {
                   )}
                 </div>
               </div>
-
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-medium text-gray-900">Localização</h3>
@@ -522,7 +517,6 @@ export default function PostPage() {
                     <span>{isLoadingLocation ? "Obtendo..." : "Usar Minha Localização"}</span>
                   </Button>
                 </div>
-
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <label htmlFor="cep" className="block text-sm font-medium text-gray-700 mb-2">
@@ -572,7 +566,6 @@ export default function PostPage() {
                     {errors.number && <p className="text-red-500 text-sm mt-1">{errors.number}</p>}
                   </div>
                 </div>
-
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <label htmlFor="neighborhood" className="block text-sm font-medium text-gray-700 mb-2">
@@ -616,7 +609,6 @@ export default function PostPage() {
                   </div>
                 </div>
               </div>
-
               <div className="flex flex-col sm:flex-row gap-4 pt-4">
                 <Button type="submit" disabled={isSubmitting} className="bg-red-600 hover:bg-red-700 text-white flex-1">
                   {isSubmitting ? "Publicando..." : "Publicar Emergência"}
